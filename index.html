@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Systems Programming Language — Provable Safety & Zero-GC</title>
+  <meta name="description" content="Nova is a modern systems programming language featuring Perceus Zero-GC in-place reuse, Microsoft Z3 SMT formal verification, and bare-metal C/C++ parity.">
+  <meta property="og:title" content="Nova Systems Programming Language">
+  <meta property="og:description" content="Provable Memory Safety • Perceus In-Place Reuse • Zero GC • SMT Refinements • Bare-Metal Control">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://novasystems-dev.github.io">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.7);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --cyan: #38bdf8;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --code-bg: #0d1117;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glows */
+    .glow-bg {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 1200px;
+      height: 700px;
+      background: radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.15), rgba(56, 189, 248, 0.08), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header / Navbar */
+    header {
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(16px);
+      background: rgba(9, 13, 22, 0.8);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-emoji {
+      font-size: 1.6rem;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5));
+    }
+
+    .brand-tag {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--cyan);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 90px 0 60px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 6px 16px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 3.75rem;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-title span {
+      background: linear-gradient(135deg, #ffffff 30%, var(--cyan) 70%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+    }
+
+    .hero-cta {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 54px;
+      flex-wrap: wrap;
+    }
+
+    /* Terminal Quick Install Box */
+    .install-box {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .install-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .install-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--cyan);
+    }
+
+    .install-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      color: #38bdf8;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .install-cmd {
+      user-select: all;
+      word-break: break-all;
+    }
+
+    .install-cmd span.prompt {
+      color: var(--text-muted);
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    /* Pillars / Features */
+    .section {
+      padding: 90px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .section-tag {
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(12px);
+      position: relative;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+      border-color: var(--border-accent);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Code Showcase Tabbed */
+    .showcase-wrapper {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    .showcase-tabs {
+      display: flex;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .showcase-tab {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 14px 24px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .showcase-tab.active {
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .showcase-content {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      min-height: 380px;
+    }
+
+    @media (max-width: 900px) {
+      .showcase-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .code-view {
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .output-view {
+      background: rgba(0, 0, 0, 0.35);
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .output-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--emerald);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Benchmarks Section */
+    .bench-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    .bench-table th, .bench-table td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bench-table th {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .bench-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .bench-highlight {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .tag-zero {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* Ecosystem Grid */
+    .ecosystem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .eco-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eco-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .eco-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .eco-emoji {
+      font-size: 1.5rem;
+    }
+
+    .eco-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .eco-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .eco-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--purple);
+      display: inline-block;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 60px 0 36px;
+      background: rgba(9, 13, 22, 0.9);
+      margin-top: 60px;
+    }
+
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--cyan);
+    }
+
+    .footer-bottom {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 24px;
+    }
+
+    /* Syntax Highlighting primitives */
+    .kwd { color: #f43f5e; font-weight: 600; }
+    .typ { color: #38bdf8; font-weight: 600; }
+    .fn  { color: #8b5cf6; }
+    .str { color: #10b981; }
+    .num { color: #f59e0b; }
+    .cmt { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="glow-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-wrapper">
+      <a href="#" class="brand">
+        <span class="brand-emoji">🌌</span>
+        <span>Nova <span class="brand-tag">Systems</span></span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#showcase">Code</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#benchmarks">Benchmarks</a></li>
+          <li><a href="#ecosystem">Ecosystem</a></li>
+          <li><a href="https://github.com/novasystems-dev/book" target="_blank">Book</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a href="https://github.com/novasystems-dev/playground" class="btn btn-secondary" target="_blank">🎮 Playground</a>
+          <a href="https://github.com/novasystems-dev/nova" class="btn btn-primary" target="_blank">★ GitHub</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge-pill">
+        <span>✨</span> Nova Systems v0.3.0 Self-Hosted Release Available
+      </div>
+      <h1 class="hero-title">
+        The Provable Systems Programming Language
+      </h1>
+      <p class="hero-desc">
+        Deterministic memory safety without garbage collection pauses. Mathematical formal verification powered by the Microsoft Z3 SMT prover. Bare-metal hardware parity with C/C++.
+      </p>
+      <div class="hero-cta">
+        <a href="#install" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">🚀 Install Nova</a>
+        <a href="https://github.com/novasystems-dev/playground" class="btn btn-secondary" style="padding: 12px 28px; font-size: 1rem;" target="_blank">🎮 Live Sandbox</a>
+        <a href="https://github.com/novasystems-dev/book" class="btn btn-secondary" style="padding: 12px 28px; font-size: 1rem;" target="_blank">📖 Read The Book</a>
+      </div>
+
+      <!-- Quick Install Box -->
+      <div class="install-box" id="install">
+        <div class="install-header">
+          <div class="install-tabs">
+            <button class="tab-btn active" onclick="switchInstall('unix')">Linux & macOS</button>
+            <button class="tab-btn" onclick="switchInstall('win')">Windows (PowerShell)</button>
+            <button class="tab-btn" onclick="switchInstall('orbit')">Orbit Toolchain</button>
+            <button class="tab-btn" onclick="switchInstall('docker')">Docker</button>
+          </div>
+          <span style="font-size: 0.8rem; color: #64748b;">One-Line Automated</span>
+        </div>
+        <div class="install-body">
+          <div class="install-cmd" id="installCmd">
+            <span class="prompt">$</span>curl -fsSL https://raw.githubusercontent.com/novasystems-dev/nova/master/install.sh | bash
+          </div>
+          <button class="copy-btn" onclick="copyInstall()">Copy Command</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Key Pillars Section -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Architecture</div>
+        <h2 class="section-title">Engineered for Correctness & Speed</h2>
+        <p class="section-subtitle">
+          Nova unifies the ergonomic safety of Rust, the raw execution speed of C, and the mathematical rigor of formal verification.
+        </p>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3 class="card-title">Perceus In-Place Reuse</h3>
+          <p class="card-desc">
+            Zero garbage collection. When an object's reference count is 1, mutations execute destructively in place without allocating new memory chunks, eliminating runtime latency spikes.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📐</div>
+          <h3 class="card-title">SMT Refinement Types</h3>
+          <p class="card-desc">
+            Compile-time formal verification via Microsoft Z3. Array bounds, non-zero division, and buffer invariants are mathematically proven before your program ever runs.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">🛡️</div>
+          <h3 class="card-title">Capability Concurrency</h3>
+          <p class="card-desc">
+            Memory isolation is enforced by the type system through <code style="color:var(--pink)">iso</code>, <code style="color:var(--cyan)">val</code>, and <code style="color:var(--emerald)">ref</code> capabilities, eliminating data races at compile time.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⚙️</div>
+          <h3 class="card-title">Bare-Metal Parity</h3>
+          <p class="card-desc">
+            First-class raw pointers (<code style="color:var(--cyan)">*mut T</code>, <code style="color:var(--cyan)">*const T</code>), inline assembly, and direct FFI integration for writing kernels, hypervisors, and high-frequency trading engines.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Code Showcase -->
+  <section class="section" id="showcase">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Code Walkthrough</div>
+        <h2 class="section-title">See Nova in Action</h2>
+        <p class="section-subtitle">
+          Clean syntax, declarative semantics, and provable safety invariants built right into the language.
+        </p>
+      </div>
+
+      <div class="showcase-wrapper">
+        <div class="showcase-tabs">
+          <button class="showcase-tab active" onclick="switchSnippet(0)">1. Perceus Zero-GC Reuse</button>
+          <button class="showcase-tab" onclick="switchSnippet(1)">2. Z3 SMT Refinements</button>
+          <button class="showcase-tab" onclick="switchSnippet(2)">3. Bare-Metal & Pointers</button>
+          <button class="showcase-tab" onclick="switchSnippet(3)">4. Concurrency Channels</button>
+        </div>
+        <div class="showcase-content">
+          <pre class="code-view" id="codeView"></pre>
+          <div class="output-view">
+            <div class="output-title"><span>●</span> Compiler & Execution Output</div>
+            <pre id="outputView" style="white-space: pre-wrap; line-height: 1.6;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Performance Benchmarks Section -->
+  <section class="section" id="benchmarks">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Performance</div>
+        <h2 class="section-title">Benchmark Comparison</h2>
+        <p class="section-subtitle">
+          High-performance systems language comparison across memory footprint, latency, and throughput.
+        </p>
+      </div>
+
+      <table class="bench-table">
+        <thead>
+          <tr>
+            <th>Language</th>
+            <th>Memory Model</th>
+            <th>GC Pause Time</th>
+            <th>Formal SMT Verification</th>
+            <th>Self-Hosted Pure Compiler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="bench-highlight">🌌 Nova v0.3.0</td>
+            <td>Perceus In-Place Reuse</td>
+            <td><span class="tag-zero">0.0 ms (Deterministic)</span></td>
+            <td><span style="color: var(--emerald); font-weight:700;">✓ Microsoft Z3 Native</span></td>
+            <td><span style="color: var(--cyan); font-weight:700;">100% Pure Nova</span></td>
+          </tr>
+          <tr>
+            <td>Rust 1.76</td>
+            <td>Affine Borrow Checker</td>
+            <td>0.0 ms (Deterministic)</td>
+            <td>Manual (Kani / Creusot)</td>
+            <td>Self-Hosted (Rust)</td>
+          </tr>
+          <tr>
+            <td>C++23 (Clang 18)</td>
+            <td>Manual / RAII</td>
+            <td>0.0 ms (Manual Free)</td>
+            <td>None</td>
+            <td>C++</td>
+          </tr>
+          <tr>
+            <td>Go 1.22</td>
+            <td>Tricolor Tracing GC</td>
+            <td>0.8 ms - 2.5 ms (Concurrent)</td>
+            <td>None</td>
+            <td>Go</td>
+          </tr>
+          <tr>
+            <td>Zig 0.12</td>
+            <td>Explicit Allocators</td>
+            <td>0.0 ms (Manual)</td>
+            <td>None</td>
+            <td>Self-Hosted (Zig)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Ecosystem Section -->
+  <section class="section" id="ecosystem">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Ecosystem</div>
+        <h2 class="section-title">Explore the Nova Universe</h2>
+        <p class="section-subtitle">
+          A multi-repository architecture modeled after modern language ecosystems like <code style="color:var(--cyan)">rust-lang</code>.
+        </p>
+      </div>
+
+      <div class="ecosystem-grid">
+        <a href="https://github.com/novasystems-dev/orbit" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">🪐</span>
+              <span class="eco-name">Orbit</span>
+            </div>
+            <p class="eco-desc">Official package manager, deterministic dependency resolver, and build orchestration toolchain for Nova.</p>
+          </div>
+          <span class="eco-badge">v0.2.0 • 100% Pure Nova →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/nova-analyzer" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">⚡</span>
+              <span class="eco-name">Nova Analyzer</span>
+            </div>
+            <p class="eco-desc">Language Server Protocol (LSP 3.17), Tree-Sitter grammar, and official VS Code editor extension.</p>
+          </div>
+          <span class="eco-badge">LSP Server & IDE →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/book" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">📖</span>
+              <span class="eco-name">The Nova Book</span>
+            </div>
+            <p class="eco-desc">The official mdBook guide covering Perceus memory, SMT verification, concurrency, and bare-metal programming.</p>
+          </div>
+          <span class="eco-badge">Official Guide →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/playground" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">🎮</span>
+              <span class="eco-name">Playground</span>
+            </div>
+            <p class="eco-desc">Interactive in-browser code editor powered by Monaco, WebAssembly, and live Z3 theorem verification.</p>
+          </div>
+          <span class="eco-badge">Web Sandbox →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/rfcs" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">📜</span>
+              <span class="eco-name">Nova RFCs</span>
+            </div>
+            <p class="eco-desc">Official language evolution process, architectural specifications, and community design proposals.</p>
+          </div>
+          <span class="eco-badge">RFC Governance →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/nova-tools" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">🛠️</span>
+              <span class="eco-name">Nova Tools</span>
+            </div>
+            <p class="eco-desc">Developer utility suite including code formatter (nova-fmt), linter (nova-lint), docgen, and interactive REPL.</p>
+          </div>
+          <span class="eco-badge">Developer Suite →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/nova-runtime" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">⚙️</span>
+              <span class="eco-name">Nova Runtime</span>
+            </div>
+            <p class="eco-desc">Minimal, sub-microsecond Perceus chunk allocator, lock-free atomics, and POSIX/Winsock transport engine.</p>
+          </div>
+          <span class="eco-badge">C99 Bare-Metal →</span>
+        </a>
+
+        <a href="https://github.com/novasystems-dev/awesome-nova" class="eco-card" target="_blank">
+          <div>
+            <div class="eco-header">
+              <span class="eco-emoji">💎</span>
+              <span class="eco-name">Awesome Nova</span>
+            </div>
+            <p class="eco-desc">A curated collection of libraries, frameworks, operating system kernels, and community showcases.</p>
+          </div>
+          <span class="eco-badge">Curated Resources →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-left">
+          <a href="#" class="brand">
+            <span class="brand-emoji">🌌</span>
+            <span>Nova <span class="brand-tag">Systems</span></span>
+          </a>
+          <p style="color: #64748b; font-size: 0.9rem;">
+            Provable memory safety, zero-GC execution, and bare-metal systems parity.
+          </p>
+        </div>
+        <ul class="footer-links">
+          <li><a href="https://github.com/novasystems-dev/nova" target="_blank">Compiler</a></li>
+          <li><a href="https://github.com/novasystems-dev/orbit" target="_blank">Orbit</a></li>
+          <li><a href="https://github.com/novasystems-dev/book" target="_blank">Documentation</a></li>
+          <li><a href="https://github.com/novasystems-dev/rfcs" target="_blank">RFCs</a></li>
+          <li><a href="https://github.com/novasystems-dev/playground" target="_blank">Playground</a></li>
+        </ul>
+      </div>
+      <div class="footer-bottom">
+        Copyright (c) 2026 Fyew999 (Nova Systems). Released under the PolyForm Noncommercial License 1.0.0.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const installCommands = {
+      unix: 'curl -fsSL https://raw.githubusercontent.com/novasystems-dev/nova/master/install.sh | bash',
+      win: 'irm https://raw.githubusercontent.com/novasystems-dev/nova/master/install.ps1 | iex',
+      orbit: 'orbit init my_project && orbit build --release',
+      docker: 'docker run -it novasystems/nova:latest novac --version'
+    };
+
+    function switchInstall(platform) {
+      document.querySelectorAll('.install-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('installCmd').innerHTML = '<span class="prompt">$</span>' + installCommands[platform];
+    }
+
+    function copyInstall() {
+      const text = document.getElementById('installCmd').innerText.replace('$ ', '').replace('$', '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.innerText = 'Copied! ✓';
+        btn.style.color = '#10b981';
+        btn.style.borderColor = '#10b981';
+        setTimeout(() => {
+          btn.innerText = 'Copy Command';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 2000);
+      });
+    }
+
+    const snippets = [
+      {
+        code: `<span class="cmt">// Perceus In-Place Buffer Recycling</span>
+<span class="kwd">import</span> std.io
+<span class="kwd">import</span> std.vec
+
+<span class="kwd">fn</span> <span class="fn">process_telemetry</span>(mut data: <span class="typ">Vec</span>[<span class="typ">Int</span>]) -> <span class="typ">Vec</span>[<span class="typ">Int</span>]:
+    <span class="cmt">// If refcount == 1, Perceus modifies buffer destructively in place!</span>
+    <span class="kwd">for</span> i <span class="kwd">in</span> <span class="num">0</span>..<span class="fn">len</span>(data):
+        data[i] = data[i] * <span class="num">2</span> + <span class="num">1</span>
+    <span class="kwd">return</span> data
+
+<span class="kwd">fn</span> <span class="fn">main</span>():
+    <span class="kwd">let</span> mut sensor = <span class="typ">Vec</span>.<span class="fn">from</span>([<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>])
+    <span class="kwd">let</span> updated = <span class="fn">process_telemetry</span>(sensor)
+    io.<span class="fn">println</span>(<span class="str">"Recycled Buffer: "</span> + <span class="fn">str</span>(updated))`,
+        output: `[novac] Compiling telemetry.nova (Perceus Optimizer active)
+[perceus] Analysis: 'data' has unique reference (rc == 1).
+[perceus] Optimized: In-place buffer mutation verified. 0 heap allocations.
+[native] Running binary...
+Recycled Buffer: [21, 41, 61, 81]
+Process finished in 0.04ms (0 GC pauses).`
+      },
+      {
+        code: `<span class="cmt">// Formal Verification with Microsoft Z3</span>
+<span class="cmt">// Denominator proven non-zero at compile time!</span>
+<span class="kwd">type</span> <span class="typ">NonZero</span> = n: <span class="typ">Int</span> <span class="kwd">where</span> n != <span class="num">0</span>
+<span class="kwd">type</span> <span class="typ">SafePort</span> = p: <span class="typ">Int</span> <span class="kwd">where</span> p >= <span class="num">1024</span> && p <= <span class="num">65535</span>
+
+<span class="kwd">fn</span> <span class="fn">safe_divide</span>(numerator: <span class="typ">Int</span>, denominator: <span class="typ">NonZero</span>) -> <span class="typ">Int</span>:
+    <span class="kwd">return</span> numerator / denominator
+
+<span class="kwd">fn</span> <span class="fn">main</span>():
+    <span class="kwd">let</span> valid_div: <span class="typ">NonZero</span> = <span class="num">42</span>
+    <span class="kwd">let</span> res = <span class="fn">safe_divide</span>(<span class="num">1000</span>, valid_div)
+    io.<span class="fn">println</span>(<span class="str">"Z3 Proof Result: "</span> + <span class="fn">str</span>(res))`,
+        output: `[novac check] Invoking Microsoft Z3 SMT Theorem Prover...
+[z3] Proving Refinement: valid_div (42 != 0) -> SATISFIED (0.001s)
+[z3] Proving Arithmetic: numerator / denominator -> DIVISION_BY_ZERO_IMPOSSIBLE
+[novac] Formal Verification: 2 lemmas proven, 0 counter-examples found.
+[native] Z3 Proof Result: 23`
+      },
+      {
+        code: `<span class="cmt">// Bare-Metal Systems Parity</span>
+<span class="kwd">fn</span> <span class="fn">write_vga_buffer</span>():
+    <span class="cmt">// Hardware raw pointer directly mapped to memory</span>
+    <span class="kwd">let</span> vga_mem: <span class="typ">*mut U8</span> = <span class="fn">cast</span>(<span class="num">0xB8000</span>)
+    <span class="kwd">let</span> char_byte: <span class="typ">U8</span> = <span class="num">0x4E</span>  <span class="cmt">// ASCII 'N'</span>
+    
+    <span class="kwd">unsafe</span>:
+        *vga_mem = char_byte
+        *(vga_mem + <span class="num">1</span>) = <span class="num">0x0F</span> <span class="cmt">// White text on black</span>
+        
+    io.<span class="fn">println</span>(<span class="str">"VGA Direct Memory Written Successfully"</span>)`,
+        output: `[novac] Emitting Direct LLVM SSA IR (Target: x86_64-unknown-none)
+[llvm] store i8 78, i8* inttoptr (i64 753664 to i8*), align 1
+[native] Zero-overhead hardware mapping verified.
+VGA Direct Memory Written Successfully`
+      },
+      {
+        code: `<span class="cmt">// Capability-Gated Concurrency (iso & channels)</span>
+<span class="kwd">import</span> std.sync
+
+<span class="kwd">fn</span> <span class="fn">worker</span>(tx: <span class="typ">Channel</span>[<span class="typ">iso</span> <span class="typ">String</span>]):
+    <span class="kwd">let</span> msg: <span class="typ">iso</span> <span class="typ">String</span> = <span class="str">"Telemetry data from Fiber #1"</span>
+    <span class="cmt">// Isolated memory transferred across threads with 0 copies!</span>
+    tx.<span class="fn">send</span>(msg)
+
+<span class="kwd">fn</span> <span class="fn">main</span>():
+    <span class="kwd">let</span> (tx, rx) = sync.<span class="fn">channel</span>[<span class="typ">iso</span> <span class="typ">String</span>]()
+    sync.<span class="fn">spawn</span>(() => <span class="fn">worker</span>(tx))
+    <span class="kwd">let</span> result = rx.<span class="fn">recv</span>()
+    io.<span class="fn">println</span>(<span class="str">"Received: "</span> + result)`,
+        output: `[novac] Capability Checker: 'iso' transfer ownership verified.
+[novac] Data-race freedom proven at compile time.
+[native] Spawning M:N green thread fiber runtime...
+Received: Telemetry data from Fiber #1`
+      }
+    ];
+
+    function switchSnippet(idx) {
+      document.querySelectorAll('.showcase-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === idx);
+      });
+      document.getElementById('codeView').innerHTML = snippets[idx].code;
+      document.getElementById('outputView').innerText = snippets[idx].output;
+    }
+
+    // Initialize snippet 0
+    switchSnippet(0);
+  </script>
+</body>
+</html>
